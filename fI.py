@@ -131,9 +131,9 @@ currentValue = 20;           # uA/cm^2
 J1[ti:tf] = currentValue;
 
 # FJ curve
-J_0 = 0                 # Initial current value
-J_f = 20                # Final current value
-dJ = 1                 # current step
+J_0 = 8                 # Initial current value
+J_f = 10                # Final current value
+dJ = .2                 # current step
 J_array = np.arange(J_0, J_f, dJ)
 f_array_1 = np.zeros(len(J_array))
 f_array_2 = np.zeros(len(J_array))
@@ -145,7 +145,6 @@ currentValue = J_0
 # Method: Runge-Kutta 4th order
 for k in range (len(J_array)):
     J1[ti:tf] = J_array[k]
-    print(J1)
     for i in range(len(t) - 1):
         n1 = deltaT*((n_f_eq(V[i]) - n[i])/tau_n_eq(V[i]))
         n2 = deltaT*((n_f_eq(V[i] + .5*n1) - n[i])/tau_n_eq(V[i] + .5*n1))
@@ -176,7 +175,7 @@ for k in range (len(J_array)):
         b3 = deltaT*((b_f_eq(V[i] + .5*b2) - b[i])/tau_b_eq(V[i] + .5*b2))*0.25
         b4 = deltaT*((b_f_eq(V[i] + deltaT*b3) - b[i])/tau_b_eq(V[i] + deltaT*b3))*0.25
         
-        b[i + 1] = b[i] + (b1 + 2*(b2 + b3) + b4)*.25/6 
+        b[i + 1] = b[i] + (b1 + 2*(b2 + b3) + b4)/6 
         
         I_Na = I_Na_eq(m[i], h[i], V[i])
         I_K = I_K_eq(n[i], V[i]) 
