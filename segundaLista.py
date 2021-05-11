@@ -41,7 +41,6 @@ m = np.zeros(len(t))
 h = np.zeros(len(t))
 a = np.zeros(len(t))
 b = np.zeros(len(t))
-b025 = np.zeros(len(t))
 
 V[0] = V0
 n[0] = n0
@@ -49,7 +48,6 @@ m[0] = m0
 h[0] = h0
 a[0] = a0
 b[0] = b0
-b025[0] = b0
 
 ## J applied
 J = np.zeros(len(t))
@@ -170,8 +168,8 @@ for i in range(len(t) - 1):
     b3 = deltaT*((b_f_eq(V[i] + .5*b2) - b[i])/tau_b_eq(V[i] + .5*b2))
     b4 = deltaT*((b_f_eq(V[i] + deltaT*b3) - b[i])/tau_b_eq(V[i] + deltaT*b3))
     
-    #b[i + 1] = b[i] + (b1 + 2*(b2 + b3) + b4)/6
-    b[i + 1] = b[i] + (b1 + 2*(b2 + b3) + b4)*.25/6
+    b[i + 1] = b[i] + (b1 + 2*(b2 + b3) + b4)/6
+    #b[i + 1] = b[i] + (b1 + 2*(b2 + b3) + b4)*.25/6
     
     I_Na = I_Na_eq(m[i], h[i], V[i])
     I_K = I_K_eq(n[i], V[i]) 
@@ -187,28 +185,29 @@ for i in range(len(t) - 1):
     V4 = deltaT*((Iion + V3)/Cm)
     V[i + 1] = V[i] + (V1 + 2*(V2 + V3) + V4)/6 
 
+
 # Action Potential Counter
 AP_Counter = 0
-t_AP = np.zeros(len(V))
-for j in range (len(V)):
-    if (V[j] > 0 and V[j + 1] < 0):
+position = 0
+t_AP = []
+for j in range (0, len(t) - 1):
+    if (V[j] > 40 and V[j + 1] < 40):
         AP_Counter += 1
-        t_AP[j] = j
-        f_between_AP = j - t_AP
-
-aux = 0
-for k in range(len(t_AP) - 1):
-    if (t_AP[k] != 0):
-        for l in range(k, len(t_AP)):    
-            if (t_AP[l] != 0):
-                aux = l - k
-print(aux)
+        t_AP.append(j)
         
-print('AP_Counter = ', AP_Counter)
-# Frequency
-f = (AP_Counter/(duration*deltaT))*1000
+    # First AP Latency 
+    if (AP_Counter == 1):
+        position = j
 
-print('f = ',f)
+t_l = round((position - ti)*deltaT,2)
+print('Latencia = ',t_l)
+
+t_between_AP = []
+for l in range(len(t_AP) - 1):
+    t_between_AP.append(t_AP[l + 1] - t_AP[l])
+
+m_t_AP = round(np.mean(t_between_AP)*deltaT, 2)
+print('media do tempo entre AP = ', m_t_AP)
 
 # Plots
 fig2, axs2 = plt.subplots(4, sharex=True, figsize=(14,13))
@@ -228,7 +227,9 @@ axs2[1].set(ylabel='a x b')
 axs2[1].legend(shadow=True, fancybox=True)
 axs2[1].grid()
 
-axs2[2].set_title('Tensão - V')
+axs2[2].set_title("Tensão - V")
+axs2[2].text(2, 20, f'Latência do primeiro disparo = {t_l}ms', fontsize=10)
+axs2[2].text(2, 0, f'Média do tempo entre AP = {m_t_AP}ms', fontsize=10)
 axs2[2].set(ylabel='V')
 axs2[2].set_yticks(np.arange(-85, 55, step = 10))
 axs2[2].plot(t,V)
