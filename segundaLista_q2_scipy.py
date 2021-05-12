@@ -36,12 +36,12 @@ Cm = 100*pico           # Farads
 t = np.arange(0, simulationTime + deltaT, deltaT) 
 
 ## J applied
-Jbase_value = 10*micro;           # A/cm^2
-Jstep_value = 10*micro;
+Jbase_value = 20*micro;           # A/cm^2
+Jstep_value = -20*micro;
 J = Jbase_value*np.ones(len(t))
-step_on = 2500
-step_off = 5000
-J[step_on: step_off] = Jbase_value + Jstep_value
+step_on = 250*mili
+step_off = 500*mili
+J[25000: 50000] = Jbase_value + Jstep_value
 
 # Equations
 def e(x):
@@ -60,9 +60,6 @@ def beta_m_eq(Vm):
 def m_f_eq(Vm):
     return alpha_m_eq(Vm)/(alpha_m_eq(Vm) + beta_m_eq(Vm))
 
-def tau_m_eq(Vm):
-    return 1/(alpha_m_eq(Vm) + beta_m_eq(Vm))
-
 ## h
 def alpha_h_eq(Vm):
     return 350*e(-50*(Vm + .058))
@@ -72,9 +69,6 @@ def beta_h_eq(Vm):
 
 def h_f_eq(Vm):
     return alpha_h_eq(Vm)/(alpha_h_eq(Vm) + beta_h_eq(Vm)) 
-
-def tau_h_eq(Vm):
-    return 1/(alpha_h_eq(Vm) + beta_h_eq(Vm))
 
 ## n
 def alpha_n_eq(Vm):
@@ -88,9 +82,6 @@ def beta_n_eq(Vm):
 
 def n_f_eq(Vm):
     return alpha_n_eq(Vm)/(alpha_n_eq(Vm) + beta_n_eq(Vm))
-
-def tau_n_eq(Vm):
-    return 1/(alpha_n_eq(Vm) + beta_n_eq(Vm))
 
 ## mT
 def mCaT_f_eq(Vm):
@@ -114,7 +105,7 @@ def I_Na_eq(m,h,Vm):
     return G_Na*(m**3)*h*(Vm - E_Na)
 
 def I_K_eq(n,Vm):
-    return G_K*(n**4)*(Vm - E_Na)
+    return G_K*(n**4)*(Vm - E_K)
 
 def I_CaT_eq(mT,hT,Vm):
     return G_CaT*(mT**2)*hT*(Vm - E_Ca)
@@ -128,22 +119,25 @@ h_CaT0 = hCaT_f_eq(E_leak)
 m_f = m_f_eq(E_leak)
 m_CaT_f = mCaT_f_eq(E_leak)
 
+Jinj = []
 # Method: Runge-Kutta 4th order
 def calcium_Current_T_Type(t,y):
     V, n, h, h_CaT = y
     
     I_leak = I_leak_eq(V)  
-    I_Na = I_Na_eq(m_f, h, V)
+    I_Na = I_Na_eq(m_f_eq(V), h, V)
     I_K = I_K_eq(n, V) 
-    I_CaT = I_CaT_eq(m_CaT_f, h_CaT, V)
+    I_CaT = I_CaT_eq(mCaT_f_eq(V), h_CaT, V)
     
     if (t < step_on):
         Jin = Jbase_value
-    elif (step_on < t < step_off):
+    elif (step_on < t <= step_off):
         Jin = Jbase_value + Jstep_value
     else:
         Jin = Jbase_value
-        
+    
+    Jinj.append(Jin)
+    
     Iion = Jin - I_K - I_Na - I_leak - I_CaT;
     
     dVdt = Iion/Cm
@@ -153,41 +147,46 @@ def calcium_Current_T_Type(t,y):
     
     return dVdt, dndt, dhdt, dh_CaTdt
 
-
+dt = int(simulationTime/deltaT)
 solution = scp.solve_ivp(calcium_Current_T_Type, 
-                               [step_on, step_off],
+                               [0, simulationTime],
                                [V0, n0, h0, h_CaT0],
-                               t_eval=t)
+                               t_eval = np.linspace(0, simulationTime, dt))
 
-'''
+t_s = solution.t
+V = solution.y[0,:]
+n = solution.y[1,:]
+h = solution.y[2,:]
+h_CaT = solution.y[3,:]
+
+
 # Plots
 fig2, axs2 = plt.subplots(5, sharex=True, figsize=(14,13))
 fig2.suptitle("Questão 2 - letra a")
 axs2[0].set_title('n')
-axs2[0].plot(t,n)
+axs2[0].plot(t_s,n)
 axs2[0].set(ylabel='n')
 axs2[0].grid()
 
 axs2[1].set_title('h')
-axs2[1].plot(t,h)
+axs2[1].plot(t_s,h)
 axs2[1].set(ylabel='h')
 axs2[1].grid()
 
 axs2[2].set_title('h_CaT')
-axs2[2].plot(t,h_CaT)
+axs2[2].plot(t_s,h_CaT)
 axs2[2].set(ylabel='h_CaT')
 axs2[2].grid()
 
 axs2[3].set_title("Tensão - V")
 axs2[3].set(ylabel='V')
 #axs2[3].set_yticks(np.arange(-85, 55, step = 10))
-axs2[3].plot(t,V)
+axs2[3].plot(t_s,V)
 axs2[3].grid()
 
 axs2[4].set_title("J - Densidade de corrente")
 axs2[4].plot(t,J)
-axs2[4].set(ylabel='J (uA/cm^2)')
-axs2[4].set_xticks(np.arange(0, simulationTime + 1, step = 50))
-axs2[4].set(xlabel='t (ms)')
+axs2[4].set(ylabel='J (A/m^2)')
+axs2[4].set_xticks(np.arange(0, simulationTime, step = 50*mili))
+axs2[4].set(xlabel='t (s)')
 axs2[4].grid()
-'''
